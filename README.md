@@ -1,9 +1,9 @@
 
 
 
-<p align="center" width="100%" style="background-color:black;">
+<!-- <p align="center" background-color='red' width="100%">
     <img width="33%" src="https://www.qmr.ai/wp-content/uploads/2022/03/qmr_logo.png">
-</p>
+</p> -->
 
 # qmrExchange
 

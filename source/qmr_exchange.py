@@ -104,6 +104,14 @@ class Exchange():
         )
 
     def get_latest_trade(self, ticker):
+        """Returns the latest trade of a given ticker
+
+        Args:
+            ticker (_type_): _description_
+
+        Returns:
+            _type_: _description_
+        """
         return next(trade for trade in self.trade_log[::-1] if trade.ticker == ticker)
 
     def get_trades(self, ticker):
