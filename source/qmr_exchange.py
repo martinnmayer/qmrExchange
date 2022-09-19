@@ -1,6 +1,6 @@
 from datetime import datetime
 from decimal import Decimal
-from typing import List
+from typing import List, Union
 import pandas as pd
 from enum import Enum
 from ._utils import get_datetime_range, get_random_string
@@ -11,6 +11,7 @@ class OrderSide(Enum):
 
 
 class LimitOrder():
+
     def __init__(self, ticker, price, qty, creator, side, dt=None):
         self.id = get_random_string()
         self.ticker: str = ticker
@@ -38,7 +39,14 @@ class LimitOrder():
 
 
 class OrderBook():
-    def __init__(self, ticker):
+    """An OrderBook contains all the relevant trading data of a given asset. It contains the list of bids and asks, ordered by their place in the queue.
+    """
+    def __init__(self, ticker:str):
+        """_summary_
+
+        Args:
+            ticker (str): the corresponding asset that is going to be traded in the OrderBook.
+        """
         self.ticker = ticker
         self.bids: List[LimitOrder] = []
         self.asks: List[LimitOrder] = []
@@ -52,11 +60,11 @@ class OrderBook():
 
 
     @property
-    def df(self):
+    def df(self) -> dict:
         """_summary_
 
         Returns:
-            _type_: _description_
+            dict: dictionary with two dataframes corresponding to the bids and asks of the OrderBook
         """
         return {
             'bids': pd.DataFrame.from_records([b.to_dict() for b in self.bids]),
@@ -88,6 +96,7 @@ class Trade():
 
 
 class Exchange():
+    
     def __init__(self, datetime= None):
         self.books = {}
         self.trade_log: List[Trade] = []
@@ -97,16 +106,30 @@ class Exchange():
     def __str__(self):
         return ', '.join(ob for ob in self.books)
 
-    def create_asset(self, ticker: str, seed_price=100, seed_bid=None, seed_ask=None):
+    def create_asset(self, ticker: str, seed_price=100, seed_bid=.99, seed_ask=1.01):
+        """_summary_
+
+        Args:
+            ticker (str): the ticker of the new asset
+            seed_price (int, optional): Price of an initial trade that is created for ease of use. Defaults to 100.
+            seed_bid (float, optional): Limit price of an initial buy order, expressed as percentage of the seed_price. Defaults to .99.
+            seed_ask (float, optional): Limit price of an initial sell order, expressed as percentage of the seed_price. Defaults to 1.01.
+        """
         self.books[ticker] = OrderBook(ticker)
-        seed_bid = seed_bid if seed_bid else seed_price * 0.99
-        seed_ask = seed_ask if seed_ask else seed_price * 1.01
         self._process_trade(ticker, 1, seed_price, 'init_seed', 'init_seed',)
         self.limit_buy(ticker, seed_bid, 10, 'init_seed')
         self.limit_sell(ticker, seed_ask, 10, 'init_seed')
 
 
-    def get_order_book(self, ticker: str):
+    def get_order_book(self, ticker: str) -> OrderBook:
+        """Returns the OrderBook of a given Asset
+
+        Args:
+            ticker (str): the ticker of the asset
+
+        Returns:
+            OrderBook: the orderbook of the asset.
+        """
         return self.books[ticker]
 
     def _process_trade(self, ticker, qty, price, buyer, seller):
@@ -117,10 +140,26 @@ class Exchange():
         
     
 
-    def get_latest_trade(self, ticker):
+    def get_latest_trade(self, ticker:str) -> Trade:
+        """Retrieves the most recent trade of a given asset
+
+        Args:
+            ticker (str): the ticker of the trade
+
+        Returns:
+            Trade
+        """
         return next(trade for trade in self.trade_log[::-1] if trade.ticker == ticker)
 
-    def get_trades(self, ticker):
+    def get_trades(self, ticker:str) -> pd.DataFrame:
+        """Retrieves all past trades of a given asset
+
+        Args:
+            ticker (str): the ticker of the asset
+
+        Returns:
+            pd.DataFrame: a dataframe containing all trades
+        """
         return pd.DataFrame.from_records([t.to_dict() for t in self.trade_log if t.ticker == ticker]).set_index('dt').sort_index()
 
     def get_quotes(self, ticker):
@@ -137,15 +176,39 @@ class Exchange():
         }
         return quotes
 
-    def get_best_bid(self, ticker):
+    def get_best_bid(self, ticker:str) -> LimitOrder:
+        """retrieves the current best bid in the orderbook of an asset
+
+        Args:
+            ticker (str): the ticker of the asset.
+
+        Returns:
+            LimitOrder
+        """
         if self.books[ticker].bids:
             return self.books[ticker].bids[0]
 
-    def get_best_ask(self, ticker):
+    def get_best_ask(self, ticker:str) -> LimitOrder:
+        """retrieves the current best ask in the orderbook of an asset
+
+        Args:
+            ticker (str): the ticker of the asset.
+
+        Returns:
+            LimitOrder
+        """
         if self.books[ticker].asks:
             return self.books[ticker].asks[0]
 
-    def get_midprice(self, ticker):
+    def get_midprice(self, ticker:str) -> float:
+        """Returns the current midprice of the best bid and ask quotes.
+
+        Args:
+            ticker (str): the ticker of the asset
+
+        Returns:
+            float: the current midprice
+        """
         quotes = self.get_quotes(ticker)
         return (quotes['bid_p'] + quotes['ask_p']) / 2
 
@@ -246,7 +309,9 @@ class Exchange():
 
 
 class Agent():
-    def __init__(self, name, tickers, aum=10_000):
+    """The Agent class is the base class for developing different traders that participate in the simulated exchange.
+    """
+    def __init__(self, name:str, tickers:List[str], aum:int=10_000):
         self.name = name
         self.tickers = tickers
         self.exchange:Exchange = None
@@ -258,19 +323,59 @@ class Agent():
     def __str__(self):
         return f'<Agent: {self.name}>'
 
-    def get_latest_trade(self, ticker):
+    def get_latest_trade(self, ticker:str) -> Trade:
+        """Returns the most recent trade of a given asset
+
+        Args:
+            ticker (str): the ticker of the corresponding asset
+
+        Returns:
+            Trade: the most recent trade
+        """
         return self.exchange.get_latest_trade(ticker)
 
-    def get_best_bid(self, ticker):
+    def get_best_bid(self, ticker:str) -> LimitOrder:
+        """Returns the current best limit buy order
+
+        Args:
+            ticker (str): the ticker of the asset
+
+        Returns:
+            LimitOrder: the current best limit buy order
+        """
         return self.exchange.get_best_bid(ticker)
 
-    def get_best_ask(self, ticker):
+    def get_best_ask(self, ticker:str) -> LimitOrder:
+        """Returns the current best limit sell order
+
+        Args:
+            ticker (str): the ticker of the asset
+
+        Returns:
+            LimitOrder: the current best limit sell order
+        """
         return self.exchange.get_best_ask(ticker)
     
-    def get_latest_trade(self, ticker):
+    def get_latest_trade(self, ticker:str) -> Trade:
+        """Returns the latest trade of a given asset
+
+        Args:
+            ticker (str): the ticker of the asset
+
+        Returns:
+            Trade: the latest trade of the asset
+        """
         return self.exchange.get_latest_trade(ticker)
         
-    def get_midprice(self, ticker):
+    def get_midprice(self, ticker:str) -> float:
+        """Returns the current midprice of the best bid and ask orders in the orderbook of an asset
+
+        Args:
+            ticker (str): the ticker of the asset
+
+        Returns:
+            float: the current midprice
+        """
         return self.get_midprice(ticker)
 
     def get_order_book(self,ticker):
@@ -282,25 +387,72 @@ class Agent():
     def get_trades(self, ticker):
         return self.exchange.get_trades(ticker)
 
-    def market_buy(self, ticker, qty):
+    def market_buy(self, ticker:str, qty:int):
+        """Places a market buy order. The order executes automatically at the best sell price if ask quotes are available.
+
+        Args:
+            ticker (str): the ticker of the asset.
+            qty (int): the quantity of the asset to be acquired (in units)
+
+        """
         return self.exchange.market_buy(ticker, qty, self.name)
 
-    def market_sell(self, ticker, qty):
+    def market_sell(self, ticker:str, qty:int):
+        """Places a market sell order. The order executes automatically at the best buy price if bid quotes are available.
+
+        Args:
+            ticker (str): the ticker of the asset.
+            qty (int): the quantity of the asset to be sold (in units)
+
+        """
         return self.exchange.market_sell(ticker, qty, self.name)
 
-    def limit_buy(self, ticker, price, qty):
+    def limit_buy(self, ticker:str, price:float, qty:int) -> LimitOrder:
+        """Creates a limit buy order for a given asset and quantity at a certain price.
+
+        Args:
+            ticker (str): the ticker of the asset
+            price (float): the limit price
+            qty (int): the quantity to be acquired
+
+        Returns:
+            LimitOrder
+        """
         return self.exchange.limit_buy(ticker,price,qty,self.name)
 
-    def limit_sell(self, ticker, price, qty):
+    def limit_sell(self, ticker:str, price:float, qty:int) -> LimitOrder:
+        """Creates a limit sell order for a given asset and quantity at a certain price.
+
+        Args:
+            ticker (str): the ticker of the asset
+            price (float): the limit price
+            qty (int): the quantity to be sold
+
+        Returns:
+            LimitOrder
+        """
         return self.exchange.limit_sell(ticker,price,qty,self.name)
 
     def _set_exchange(self,exchange):
         self.exchange = exchange
 
-    def cancel_order(self, id):
+    def cancel_order(self, id:str) -> Union[LimitOrder,None]:
+        """Cancels the order with a given id (if it exists)
+
+        Args:
+            id (str): the id of the limit order
+
+        Returns:
+            Union[LimitOrder,None]: the cancelled order if it is still pending. None if it does not exists or has already been filled/cancelled
+        """
         self.exchange.cancel_order(id=id)
 
-    def cancel_all_orders(self, ticker):
+    def cancel_all_orders(self, ticker:str):
+        """Cancels all remaining orders that the agent has on an asset.
+
+        Args:
+            ticker (str): the ticker of the asset.
+        """
         self.exchange.cancel_all_orders(self.name,ticker)
 
     def next(self):  

@@ -28,8 +28,7 @@
 </summary>
 <pre><code class="python">from datetime import datetime
 from decimal import Decimal
-from typing import List
-from urllib.parse import quote_plus
+from typing import List, Union
 import pandas as pd
 from enum import Enum
 from ._utils import get_datetime_range, get_random_string
@@ -40,6 +39,7 @@ class OrderSide(Enum):
 
 
 class LimitOrder():
+
     def __init__(self, ticker, price, qty, creator, side, dt=None):
         self.id = get_random_string()
         self.ticker: str = ticker
@@ -67,7 +67,14 @@ class LimitOrder():
 
 
 class OrderBook():
-    def __init__(self, ticker):
+    &#34;&#34;&#34;An OrderBook contains all the relevant trading data of a given asset. It contains the list of bids and asks, ordered by their place in the queue.
+    &#34;&#34;&#34;
+    def __init__(self, ticker:str):
+        &#34;&#34;&#34;_summary_
+
+        Args:
+            ticker (str): the corresponding asset that is going to be traded in the OrderBook.
+        &#34;&#34;&#34;
         self.ticker = ticker
         self.bids: List[LimitOrder] = []
         self.asks: List[LimitOrder] = []
@@ -81,11 +88,11 @@ class OrderBook():
 
 
     @property
-    def df(self):
+    def df(self) -&gt; dict:
         &#34;&#34;&#34;_summary_
 
         Returns:
-            _type_: _description_
+            dict: dictionary with two dataframes corresponding to the bids and asks of the OrderBook
         &#34;&#34;&#34;
         return {
             &#39;bids&#39;: pd.DataFrame.from_records([b.to_dict() for b in self.bids]),
@@ -117,6 +124,7 @@ class Trade():
 
 
 class Exchange():
+    
     def __init__(self, datetime= None):
         self.books = {}
         self.trade_log: List[Trade] = []
@@ -126,16 +134,30 @@ class Exchange():
     def __str__(self):
         return &#39;, &#39;.join(ob for ob in self.books)
 
-    def create_asset(self, ticker: str, seed_price=100, seed_bid=None, seed_ask=None):
+    def create_asset(self, ticker: str, seed_price=100, seed_bid=.99, seed_ask=1.01):
+        &#34;&#34;&#34;_summary_
+
+        Args:
+            ticker (str): the ticker of the new asset
+            seed_price (int, optional): Price of an initial trade that is created for ease of use. Defaults to 100.
+            seed_bid (float, optional): Limit price of an initial buy order, expressed as percentage of the seed_price. Defaults to .99.
+            seed_ask (float, optional): Limit price of an initial sell order, expressed as percentage of the seed_price. Defaults to 1.01.
+        &#34;&#34;&#34;
         self.books[ticker] = OrderBook(ticker)
-        seed_bid = seed_bid if seed_bid else seed_price * 0.99
-        seed_ask = seed_ask if seed_ask else seed_price * 1.01
         self._process_trade(ticker, 1, seed_price, &#39;init_seed&#39;, &#39;init_seed&#39;,)
         self.limit_buy(ticker, seed_bid, 10, &#39;init_seed&#39;)
         self.limit_sell(ticker, seed_ask, 10, &#39;init_seed&#39;)
 
 
-    def get_order_book(self, ticker: str):
+    def get_order_book(self, ticker: str) -&gt; OrderBook:
+        &#34;&#34;&#34;Returns the OrderBook of a given Asset
+
+        Args:
+            ticker (str): the ticker of the asset
+
+        Returns:
+            OrderBook: the orderbook of the asset.
+        &#34;&#34;&#34;
         return self.books[ticker]
 
     def _process_trade(self, ticker, qty, price, buyer, seller):
@@ -146,10 +168,26 @@ class Exchange():
         
     
 
-    def get_latest_trade(self, ticker):
+    def get_latest_trade(self, ticker:str) -&gt; Trade:
+        &#34;&#34;&#34;Retrieves the most recent trade of a given asset
+
+        Args:
+            ticker (str): the ticker of the trade
+
+        Returns:
+            Trade
+        &#34;&#34;&#34;
         return next(trade for trade in self.trade_log[::-1] if trade.ticker == ticker)
 
-    def get_trades(self, ticker):
+    def get_trades(self, ticker:str) -&gt; pd.DataFrame:
+        &#34;&#34;&#34;Retrieves all past trades of a given asset
+
+        Args:
+            ticker (str): the ticker of the asset
+
+        Returns:
+            pd.DataFrame: a dataframe containing all trades
+        &#34;&#34;&#34;
         return pd.DataFrame.from_records([t.to_dict() for t in self.trade_log if t.ticker == ticker]).set_index(&#39;dt&#39;).sort_index()
 
     def get_quotes(self, ticker):
@@ -166,15 +204,39 @@ class Exchange():
         }
         return quotes
 
-    def get_best_bid(self, ticker):
+    def get_best_bid(self, ticker:str) -&gt; LimitOrder:
+        &#34;&#34;&#34;retrieves the current best bid in the orderbook of an asset
+
+        Args:
+            ticker (str): the ticker of the asset.
+
+        Returns:
+            LimitOrder
+        &#34;&#34;&#34;
         if self.books[ticker].bids:
             return self.books[ticker].bids[0]
 
-    def get_best_ask(self, ticker):
+    def get_best_ask(self, ticker:str) -&gt; LimitOrder:
+        &#34;&#34;&#34;retrieves the current best ask in the orderbook of an asset
+
+        Args:
+            ticker (str): the ticker of the asset.
+
+        Returns:
+            LimitOrder
+        &#34;&#34;&#34;
         if self.books[ticker].asks:
             return self.books[ticker].asks[0]
 
-    def get_midprice(self, ticker):
+    def get_midprice(self, ticker:str) -&gt; float:
+        &#34;&#34;&#34;Returns the current midprice of the best bid and ask quotes.
+
+        Args:
+            ticker (str): the ticker of the asset
+
+        Returns:
+            float: the current midprice
+        &#34;&#34;&#34;
         quotes = self.get_quotes(ticker)
         return (quotes[&#39;bid_p&#39;] + quotes[&#39;ask_p&#39;]) / 2
 
@@ -275,7 +337,9 @@ class Exchange():
 
 
 class Agent():
-    def __init__(self, name, tickers, aum=10_000):
+    &#34;&#34;&#34;The Agent class is the base class for developing different traders that participate in the simulated exchange.
+    &#34;&#34;&#34;
+    def __init__(self, name:str, tickers:List[str], aum:int=10_000):
         self.name = name
         self.tickers = tickers
         self.exchange:Exchange = None
@@ -287,19 +351,59 @@ class Agent():
     def __str__(self):
         return f&#39;&lt;Agent: {self.name}&gt;&#39;
 
-    def get_latest_trade(self, ticker):
+    def get_latest_trade(self, ticker:str) -&gt; Trade:
+        &#34;&#34;&#34;Returns the most recent trade of a given asset
+
+        Args:
+            ticker (str): the ticker of the corresponding asset
+
+        Returns:
+            Trade: the most recent trade
+        &#34;&#34;&#34;
         return self.exchange.get_latest_trade(ticker)
 
-    def get_best_bid(self, ticker):
+    def get_best_bid(self, ticker:str) -&gt; LimitOrder:
+        &#34;&#34;&#34;Returns the current best limit buy order
+
+        Args:
+            ticker (str): the ticker of the asset
+
+        Returns:
+            LimitOrder: the current best limit buy order
+        &#34;&#34;&#34;
         return self.exchange.get_best_bid(ticker)
 
-    def get_best_ask(self, ticker):
+    def get_best_ask(self, ticker:str) -&gt; LimitOrder:
+        &#34;&#34;&#34;Returns the current best limit sell order
+
+        Args:
+            ticker (str): the ticker of the asset
+
+        Returns:
+            LimitOrder: the current best limit sell order
+        &#34;&#34;&#34;
         return self.exchange.get_best_ask(ticker)
     
-    def get_latest_trade(self, ticker):
+    def get_latest_trade(self, ticker:str) -&gt; Trade:
+        &#34;&#34;&#34;Returns the latest trade of a given asset
+
+        Args:
+            ticker (str): the ticker of the asset
+
+        Returns:
+            Trade: the latest trade of the asset
+        &#34;&#34;&#34;
         return self.exchange.get_latest_trade(ticker)
         
-    def get_midprice(self, ticker):
+    def get_midprice(self, ticker:str) -&gt; float:
+        &#34;&#34;&#34;Returns the current midprice of the best bid and ask orders in the orderbook of an asset
+
+        Args:
+            ticker (str): the ticker of the asset
+
+        Returns:
+            float: the current midprice
+        &#34;&#34;&#34;
         return self.get_midprice(ticker)
 
     def get_order_book(self,ticker):
@@ -311,25 +415,72 @@ class Agent():
     def get_trades(self, ticker):
         return self.exchange.get_trades(ticker)
 
-    def market_buy(self, ticker, qty):
+    def market_buy(self, ticker:str, qty:int):
+        &#34;&#34;&#34;Places a market buy order. The order executes automatically at the best sell price if ask quotes are available.
+
+        Args:
+            ticker (str): the ticker of the asset.
+            qty (int): the quantity of the asset to be acquired (in units)
+
+        &#34;&#34;&#34;
         return self.exchange.market_buy(ticker, qty, self.name)
 
-    def market_sell(self, ticker, qty):
+    def market_sell(self, ticker:str, qty:int):
+        &#34;&#34;&#34;Places a market sell order. The order executes automatically at the best buy price if bid quotes are available.
+
+        Args:
+            ticker (str): the ticker of the asset.
+            qty (int): the quantity of the asset to be sold (in units)
+
+        &#34;&#34;&#34;
         return self.exchange.market_sell(ticker, qty, self.name)
 
-    def limit_buy(self, ticker, price, qty):
+    def limit_buy(self, ticker:str, price:float, qty:int) -&gt; LimitOrder:
+        &#34;&#34;&#34;Creates a limit buy order for a given asset and quantity at a certain price.
+
+        Args:
+            ticker (str): the ticker of the asset
+            price (float): the limit price
+            qty (int): the quantity to be acquired
+
+        Returns:
+            LimitOrder
+        &#34;&#34;&#34;
         return self.exchange.limit_buy(ticker,price,qty,self.name)
 
-    def limit_sell(self, ticker, price, qty):
+    def limit_sell(self, ticker:str, price:float, qty:int) -&gt; LimitOrder:
+        &#34;&#34;&#34;Creates a limit sell order for a given asset and quantity at a certain price.
+
+        Args:
+            ticker (str): the ticker of the asset
+            price (float): the limit price
+            qty (int): the quantity to be sold
+
+        Returns:
+            LimitOrder
+        &#34;&#34;&#34;
         return self.exchange.limit_sell(ticker,price,qty,self.name)
 
     def _set_exchange(self,exchange):
         self.exchange = exchange
 
-    def cancel_order(self, id):
+    def cancel_order(self, id:str) -&gt; Union[LimitOrder,None]:
+        &#34;&#34;&#34;Cancels the order with a given id (if it exists)
+
+        Args:
+            id (str): the id of the limit order
+
+        Returns:
+            Union[LimitOrder,None]: the cancelled order if it is still pending. None if it does not exists or has already been filled/cancelled
+        &#34;&#34;&#34;
         self.exchange.cancel_order(id=id)
 
-    def cancel_all_orders(self, ticker):
+    def cancel_all_orders(self, ticker:str):
+        &#34;&#34;&#34;Cancels all remaining orders that the agent has on an asset.
+
+        Args:
+            ticker (str): the ticker of the asset.
+        &#34;&#34;&#34;
         self.exchange.cancel_all_orders(self.name,ticker)
 
     def next(self):  
@@ -397,16 +548,18 @@ class Simulator():
 <dl>
 <dt id="exchange.source.qmr_exchange.Agent"><code class="flex name class">
 <span>class <span class="ident">Agent</span></span>
-<span>(</span><span>name, tickers, aum=10000)</span>
+<span>(</span><span>name: str, tickers: List[str], aum: int = 10000)</span>
 </code></dt>
 <dd>
-<div class="desc"></div>
+<div class="desc"><p>The Agent class is the base class for developing different traders that participate in the simulated exchange.</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">class Agent():
-    def __init__(self, name, tickers, aum=10_000):
+    &#34;&#34;&#34;The Agent class is the base class for developing different traders that participate in the simulated exchange.
+    &#34;&#34;&#34;
+    def __init__(self, name:str, tickers:List[str], aum:int=10_000):
         self.name = name
         self.tickers = tickers
         self.exchange:Exchange = None
@@ -418,19 +571,59 @@ class Simulator():
     def __str__(self):
         return f&#39;&lt;Agent: {self.name}&gt;&#39;
 
-    def get_latest_trade(self, ticker):
+    def get_latest_trade(self, ticker:str) -&gt; Trade:
+        &#34;&#34;&#34;Returns the most recent trade of a given asset
+
+        Args:
+            ticker (str): the ticker of the corresponding asset
+
+        Returns:
+            Trade: the most recent trade
+        &#34;&#34;&#34;
         return self.exchange.get_latest_trade(ticker)
 
-    def get_best_bid(self, ticker):
+    def get_best_bid(self, ticker:str) -&gt; LimitOrder:
+        &#34;&#34;&#34;Returns the current best limit buy order
+
+        Args:
+            ticker (str): the ticker of the asset
+
+        Returns:
+            LimitOrder: the current best limit buy order
+        &#34;&#34;&#34;
         return self.exchange.get_best_bid(ticker)
 
-    def get_best_ask(self, ticker):
+    def get_best_ask(self, ticker:str) -&gt; LimitOrder:
+        &#34;&#34;&#34;Returns the current best limit sell order
+
+        Args:
+            ticker (str): the ticker of the asset
+
+        Returns:
+            LimitOrder: the current best limit sell order
+        &#34;&#34;&#34;
         return self.exchange.get_best_ask(ticker)
     
-    def get_latest_trade(self, ticker):
+    def get_latest_trade(self, ticker:str) -&gt; Trade:
+        &#34;&#34;&#34;Returns the latest trade of a given asset
+
+        Args:
+            ticker (str): the ticker of the asset
+
+        Returns:
+            Trade: the latest trade of the asset
+        &#34;&#34;&#34;
         return self.exchange.get_latest_trade(ticker)
         
-    def get_midprice(self, ticker):
+    def get_midprice(self, ticker:str) -&gt; float:
+        &#34;&#34;&#34;Returns the current midprice of the best bid and ask orders in the orderbook of an asset
+
+        Args:
+            ticker (str): the ticker of the asset
+
+        Returns:
+            float: the current midprice
+        &#34;&#34;&#34;
         return self.get_midprice(ticker)
 
     def get_order_book(self,ticker):
@@ -442,25 +635,72 @@ class Simulator():
     def get_trades(self, ticker):
         return self.exchange.get_trades(ticker)
 
-    def market_buy(self, ticker, qty):
+    def market_buy(self, ticker:str, qty:int):
+        &#34;&#34;&#34;Places a market buy order. The order executes automatically at the best sell price if ask quotes are available.
+
+        Args:
+            ticker (str): the ticker of the asset.
+            qty (int): the quantity of the asset to be acquired (in units)
+
+        &#34;&#34;&#34;
         return self.exchange.market_buy(ticker, qty, self.name)
 
-    def market_sell(self, ticker, qty):
+    def market_sell(self, ticker:str, qty:int):
+        &#34;&#34;&#34;Places a market sell order. The order executes automatically at the best buy price if bid quotes are available.
+
+        Args:
+            ticker (str): the ticker of the asset.
+            qty (int): the quantity of the asset to be sold (in units)
+
+        &#34;&#34;&#34;
         return self.exchange.market_sell(ticker, qty, self.name)
 
-    def limit_buy(self, ticker, price, qty):
+    def limit_buy(self, ticker:str, price:float, qty:int) -&gt; LimitOrder:
+        &#34;&#34;&#34;Creates a limit buy order for a given asset and quantity at a certain price.
+
+        Args:
+            ticker (str): the ticker of the asset
+            price (float): the limit price
+            qty (int): the quantity to be acquired
+
+        Returns:
+            LimitOrder
+        &#34;&#34;&#34;
         return self.exchange.limit_buy(ticker,price,qty,self.name)
 
-    def limit_sell(self, ticker, price, qty):
+    def limit_sell(self, ticker:str, price:float, qty:int) -&gt; LimitOrder:
+        &#34;&#34;&#34;Creates a limit sell order for a given asset and quantity at a certain price.
+
+        Args:
+            ticker (str): the ticker of the asset
+            price (float): the limit price
+            qty (int): the quantity to be sold
+
+        Returns:
+            LimitOrder
+        &#34;&#34;&#34;
         return self.exchange.limit_sell(ticker,price,qty,self.name)
 
     def _set_exchange(self,exchange):
         self.exchange = exchange
 
-    def cancel_order(self, id):
+    def cancel_order(self, id:str) -&gt; Union[LimitOrder,None]:
+        &#34;&#34;&#34;Cancels the order with a given id (if it exists)
+
+        Args:
+            id (str): the id of the limit order
+
+        Returns:
+            Union[LimitOrder,None]: the cancelled order if it is still pending. None if it does not exists or has already been filled/cancelled
+        &#34;&#34;&#34;
         self.exchange.cancel_order(id=id)
 
-    def cancel_all_orders(self, ticker):
+    def cancel_all_orders(self, ticker:str):
+        &#34;&#34;&#34;Cancels all remaining orders that the agent has on an asset.
+
+        Args:
+            ticker (str): the ticker of the asset.
+        &#34;&#34;&#34;
         self.exchange.cancel_all_orders(self.name,ticker)
 
     def next(self):  
@@ -474,80 +714,180 @@ class Simulator():
 <h3>Methods</h3>
 <dl>
 <dt id="exchange.source.qmr_exchange.Agent.cancel_all_orders"><code class="name flex">
-<span>def <span class="ident">cancel_all_orders</span></span>(<span>self, ticker)</span>
+<span>def <span class="ident">cancel_all_orders</span></span>(<span>self, ticker: str)</span>
 </code></dt>
 <dd>
-<div class="desc"></div>
+<div class="desc"><p>Cancels all remaining orders that the agent has on an asset.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>ticker</code></strong> :&ensp;<code>str</code></dt>
+<dd>the ticker of the asset.</dd>
+</dl></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def cancel_all_orders(self, ticker):
+<pre><code class="python">def cancel_all_orders(self, ticker:str):
+    &#34;&#34;&#34;Cancels all remaining orders that the agent has on an asset.
+
+    Args:
+        ticker (str): the ticker of the asset.
+    &#34;&#34;&#34;
     self.exchange.cancel_all_orders(self.name,ticker)</code></pre>
 </details>
 </dd>
 <dt id="exchange.source.qmr_exchange.Agent.cancel_order"><code class="name flex">
-<span>def <span class="ident">cancel_order</span></span>(<span>self, id)</span>
+<span>def <span class="ident">cancel_order</span></span>(<span>self, id: str) ‑> Optional[<a title="exchange.source.qmr_exchange.LimitOrder" href="#exchange.source.qmr_exchange.LimitOrder">LimitOrder</a>]</span>
 </code></dt>
 <dd>
-<div class="desc"></div>
+<div class="desc"><p>Cancels the order with a given id (if it exists)</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>id</code></strong> :&ensp;<code>str</code></dt>
+<dd>the id of the limit order</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>Union[<a title="exchange.source.qmr_exchange.LimitOrder" href="#exchange.source.qmr_exchange.LimitOrder">LimitOrder</a>,None]</code></dt>
+<dd>the cancelled order if it is still pending. None if it does not exists or has already been filled/cancelled</dd>
+</dl></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def cancel_order(self, id):
+<pre><code class="python">def cancel_order(self, id:str) -&gt; Union[LimitOrder,None]:
+    &#34;&#34;&#34;Cancels the order with a given id (if it exists)
+
+    Args:
+        id (str): the id of the limit order
+
+    Returns:
+        Union[LimitOrder,None]: the cancelled order if it is still pending. None if it does not exists or has already been filled/cancelled
+    &#34;&#34;&#34;
     self.exchange.cancel_order(id=id)</code></pre>
 </details>
 </dd>
 <dt id="exchange.source.qmr_exchange.Agent.get_best_ask"><code class="name flex">
-<span>def <span class="ident">get_best_ask</span></span>(<span>self, ticker)</span>
+<span>def <span class="ident">get_best_ask</span></span>(<span>self, ticker: str) ‑> <a title="exchange.source.qmr_exchange.LimitOrder" href="#exchange.source.qmr_exchange.LimitOrder">LimitOrder</a></span>
 </code></dt>
 <dd>
-<div class="desc"></div>
+<div class="desc"><p>Returns the current best limit sell order</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>ticker</code></strong> :&ensp;<code>str</code></dt>
+<dd>the ticker of the asset</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code><a title="exchange.source.qmr_exchange.LimitOrder" href="#exchange.source.qmr_exchange.LimitOrder">LimitOrder</a></code></dt>
+<dd>the current best limit sell order</dd>
+</dl></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def get_best_ask(self, ticker):
+<pre><code class="python">def get_best_ask(self, ticker:str) -&gt; LimitOrder:
+    &#34;&#34;&#34;Returns the current best limit sell order
+
+    Args:
+        ticker (str): the ticker of the asset
+
+    Returns:
+        LimitOrder: the current best limit sell order
+    &#34;&#34;&#34;
     return self.exchange.get_best_ask(ticker)</code></pre>
 </details>
 </dd>
 <dt id="exchange.source.qmr_exchange.Agent.get_best_bid"><code class="name flex">
-<span>def <span class="ident">get_best_bid</span></span>(<span>self, ticker)</span>
+<span>def <span class="ident">get_best_bid</span></span>(<span>self, ticker: str) ‑> <a title="exchange.source.qmr_exchange.LimitOrder" href="#exchange.source.qmr_exchange.LimitOrder">LimitOrder</a></span>
 </code></dt>
 <dd>
-<div class="desc"></div>
+<div class="desc"><p>Returns the current best limit buy order</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>ticker</code></strong> :&ensp;<code>str</code></dt>
+<dd>the ticker of the asset</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code><a title="exchange.source.qmr_exchange.LimitOrder" href="#exchange.source.qmr_exchange.LimitOrder">LimitOrder</a></code></dt>
+<dd>the current best limit buy order</dd>
+</dl></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def get_best_bid(self, ticker):
+<pre><code class="python">def get_best_bid(self, ticker:str) -&gt; LimitOrder:
+    &#34;&#34;&#34;Returns the current best limit buy order
+
+    Args:
+        ticker (str): the ticker of the asset
+
+    Returns:
+        LimitOrder: the current best limit buy order
+    &#34;&#34;&#34;
     return self.exchange.get_best_bid(ticker)</code></pre>
 </details>
 </dd>
 <dt id="exchange.source.qmr_exchange.Agent.get_latest_trade"><code class="name flex">
-<span>def <span class="ident">get_latest_trade</span></span>(<span>self, ticker)</span>
+<span>def <span class="ident">get_latest_trade</span></span>(<span>self, ticker: str) ‑> <a title="exchange.source.qmr_exchange.Trade" href="#exchange.source.qmr_exchange.Trade">Trade</a></span>
 </code></dt>
 <dd>
-<div class="desc"></div>
+<div class="desc"><p>Returns the latest trade of a given asset</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>ticker</code></strong> :&ensp;<code>str</code></dt>
+<dd>the ticker of the asset</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code><a title="exchange.source.qmr_exchange.Trade" href="#exchange.source.qmr_exchange.Trade">Trade</a></code></dt>
+<dd>the latest trade of the asset</dd>
+</dl></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def get_latest_trade(self, ticker):
+<pre><code class="python">def get_latest_trade(self, ticker:str) -&gt; Trade:
+    &#34;&#34;&#34;Returns the latest trade of a given asset
+
+    Args:
+        ticker (str): the ticker of the asset
+
+    Returns:
+        Trade: the latest trade of the asset
+    &#34;&#34;&#34;
     return self.exchange.get_latest_trade(ticker)</code></pre>
 </details>
 </dd>
 <dt id="exchange.source.qmr_exchange.Agent.get_midprice"><code class="name flex">
-<span>def <span class="ident">get_midprice</span></span>(<span>self, ticker)</span>
+<span>def <span class="ident">get_midprice</span></span>(<span>self, ticker: str) ‑> float</span>
 </code></dt>
 <dd>
-<div class="desc"></div>
+<div class="desc"><p>Returns the current midprice of the best bid and ask orders in the orderbook of an asset</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>ticker</code></strong> :&ensp;<code>str</code></dt>
+<dd>the ticker of the asset</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>float</code></dt>
+<dd>the current midprice</dd>
+</dl></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def get_midprice(self, ticker):
+<pre><code class="python">def get_midprice(self, ticker:str) -&gt; float:
+    &#34;&#34;&#34;Returns the current midprice of the best bid and ask orders in the orderbook of an asset
+
+    Args:
+        ticker (str): the ticker of the asset
+
+    Returns:
+        float: the current midprice
+    &#34;&#34;&#34;
     return self.get_midprice(ticker)</code></pre>
 </details>
 </dd>
@@ -591,54 +931,124 @@ class Simulator():
 </details>
 </dd>
 <dt id="exchange.source.qmr_exchange.Agent.limit_buy"><code class="name flex">
-<span>def <span class="ident">limit_buy</span></span>(<span>self, ticker, price, qty)</span>
+<span>def <span class="ident">limit_buy</span></span>(<span>self, ticker: str, price: float, qty: int) ‑> <a title="exchange.source.qmr_exchange.LimitOrder" href="#exchange.source.qmr_exchange.LimitOrder">LimitOrder</a></span>
 </code></dt>
 <dd>
-<div class="desc"></div>
+<div class="desc"><p>Creates a limit buy order for a given asset and quantity at a certain price.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>ticker</code></strong> :&ensp;<code>str</code></dt>
+<dd>the ticker of the asset</dd>
+<dt><strong><code>price</code></strong> :&ensp;<code>float</code></dt>
+<dd>the limit price</dd>
+<dt><strong><code>qty</code></strong> :&ensp;<code>int</code></dt>
+<dd>the quantity to be acquired</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>LimitOrder</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def limit_buy(self, ticker, price, qty):
+<pre><code class="python">def limit_buy(self, ticker:str, price:float, qty:int) -&gt; LimitOrder:
+    &#34;&#34;&#34;Creates a limit buy order for a given asset and quantity at a certain price.
+
+    Args:
+        ticker (str): the ticker of the asset
+        price (float): the limit price
+        qty (int): the quantity to be acquired
+
+    Returns:
+        LimitOrder
+    &#34;&#34;&#34;
     return self.exchange.limit_buy(ticker,price,qty,self.name)</code></pre>
 </details>
 </dd>
 <dt id="exchange.source.qmr_exchange.Agent.limit_sell"><code class="name flex">
-<span>def <span class="ident">limit_sell</span></span>(<span>self, ticker, price, qty)</span>
+<span>def <span class="ident">limit_sell</span></span>(<span>self, ticker: str, price: float, qty: int) ‑> <a title="exchange.source.qmr_exchange.LimitOrder" href="#exchange.source.qmr_exchange.LimitOrder">LimitOrder</a></span>
 </code></dt>
 <dd>
-<div class="desc"></div>
+<div class="desc"><p>Creates a limit sell order for a given asset and quantity at a certain price.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>ticker</code></strong> :&ensp;<code>str</code></dt>
+<dd>the ticker of the asset</dd>
+<dt><strong><code>price</code></strong> :&ensp;<code>float</code></dt>
+<dd>the limit price</dd>
+<dt><strong><code>qty</code></strong> :&ensp;<code>int</code></dt>
+<dd>the quantity to be sold</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>LimitOrder</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def limit_sell(self, ticker, price, qty):
+<pre><code class="python">def limit_sell(self, ticker:str, price:float, qty:int) -&gt; LimitOrder:
+    &#34;&#34;&#34;Creates a limit sell order for a given asset and quantity at a certain price.
+
+    Args:
+        ticker (str): the ticker of the asset
+        price (float): the limit price
+        qty (int): the quantity to be sold
+
+    Returns:
+        LimitOrder
+    &#34;&#34;&#34;
     return self.exchange.limit_sell(ticker,price,qty,self.name)</code></pre>
 </details>
 </dd>
 <dt id="exchange.source.qmr_exchange.Agent.market_buy"><code class="name flex">
-<span>def <span class="ident">market_buy</span></span>(<span>self, ticker, qty)</span>
+<span>def <span class="ident">market_buy</span></span>(<span>self, ticker: str, qty: int)</span>
 </code></dt>
 <dd>
-<div class="desc"></div>
+<div class="desc"><p>Places a market buy order. The order executes automatically at the best sell price if ask quotes are available.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>ticker</code></strong> :&ensp;<code>str</code></dt>
+<dd>the ticker of the asset.</dd>
+<dt><strong><code>qty</code></strong> :&ensp;<code>int</code></dt>
+<dd>the quantity of the asset to be acquired (in units)</dd>
+</dl></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def market_buy(self, ticker, qty):
+<pre><code class="python">def market_buy(self, ticker:str, qty:int):
+    &#34;&#34;&#34;Places a market buy order. The order executes automatically at the best sell price if ask quotes are available.
+
+    Args:
+        ticker (str): the ticker of the asset.
+        qty (int): the quantity of the asset to be acquired (in units)
+
+    &#34;&#34;&#34;
     return self.exchange.market_buy(ticker, qty, self.name)</code></pre>
 </details>
 </dd>
 <dt id="exchange.source.qmr_exchange.Agent.market_sell"><code class="name flex">
-<span>def <span class="ident">market_sell</span></span>(<span>self, ticker, qty)</span>
+<span>def <span class="ident">market_sell</span></span>(<span>self, ticker: str, qty: int)</span>
 </code></dt>
 <dd>
-<div class="desc"></div>
+<div class="desc"><p>Places a market sell order. The order executes automatically at the best buy price if bid quotes are available.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>ticker</code></strong> :&ensp;<code>str</code></dt>
+<dd>the ticker of the asset.</dd>
+<dt><strong><code>qty</code></strong> :&ensp;<code>int</code></dt>
+<dd>the quantity of the asset to be sold (in units)</dd>
+</dl></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def market_sell(self, ticker, qty):
+<pre><code class="python">def market_sell(self, ticker:str, qty:int):
+    &#34;&#34;&#34;Places a market sell order. The order executes automatically at the best buy price if bid quotes are available.
+
+    Args:
+        ticker (str): the ticker of the asset.
+        qty (int): the quantity of the asset to be sold (in units)
+
+    &#34;&#34;&#34;
     return self.exchange.market_sell(ticker, qty, self.name)</code></pre>
 </details>
 </dd>
@@ -668,6 +1078,7 @@ class Simulator():
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">class Exchange():
+    
     def __init__(self, datetime= None):
         self.books = {}
         self.trade_log: List[Trade] = []
@@ -677,16 +1088,30 @@ class Simulator():
     def __str__(self):
         return &#39;, &#39;.join(ob for ob in self.books)
 
-    def create_asset(self, ticker: str, seed_price=100, seed_bid=None, seed_ask=None):
+    def create_asset(self, ticker: str, seed_price=100, seed_bid=.99, seed_ask=1.01):
+        &#34;&#34;&#34;_summary_
+
+        Args:
+            ticker (str): the ticker of the new asset
+            seed_price (int, optional): Price of an initial trade that is created for ease of use. Defaults to 100.
+            seed_bid (float, optional): Limit price of an initial buy order, expressed as percentage of the seed_price. Defaults to .99.
+            seed_ask (float, optional): Limit price of an initial sell order, expressed as percentage of the seed_price. Defaults to 1.01.
+        &#34;&#34;&#34;
         self.books[ticker] = OrderBook(ticker)
-        seed_bid = seed_bid if seed_bid else seed_price * 0.99
-        seed_ask = seed_ask if seed_ask else seed_price * 1.01
         self._process_trade(ticker, 1, seed_price, &#39;init_seed&#39;, &#39;init_seed&#39;,)
         self.limit_buy(ticker, seed_bid, 10, &#39;init_seed&#39;)
         self.limit_sell(ticker, seed_ask, 10, &#39;init_seed&#39;)
 
 
-    def get_order_book(self, ticker: str):
+    def get_order_book(self, ticker: str) -&gt; OrderBook:
+        &#34;&#34;&#34;Returns the OrderBook of a given Asset
+
+        Args:
+            ticker (str): the ticker of the asset
+
+        Returns:
+            OrderBook: the orderbook of the asset.
+        &#34;&#34;&#34;
         return self.books[ticker]
 
     def _process_trade(self, ticker, qty, price, buyer, seller):
@@ -697,10 +1122,26 @@ class Simulator():
         
     
 
-    def get_latest_trade(self, ticker):
+    def get_latest_trade(self, ticker:str) -&gt; Trade:
+        &#34;&#34;&#34;Retrieves the most recent trade of a given asset
+
+        Args:
+            ticker (str): the ticker of the trade
+
+        Returns:
+            Trade
+        &#34;&#34;&#34;
         return next(trade for trade in self.trade_log[::-1] if trade.ticker == ticker)
 
-    def get_trades(self, ticker):
+    def get_trades(self, ticker:str) -&gt; pd.DataFrame:
+        &#34;&#34;&#34;Retrieves all past trades of a given asset
+
+        Args:
+            ticker (str): the ticker of the asset
+
+        Returns:
+            pd.DataFrame: a dataframe containing all trades
+        &#34;&#34;&#34;
         return pd.DataFrame.from_records([t.to_dict() for t in self.trade_log if t.ticker == ticker]).set_index(&#39;dt&#39;).sort_index()
 
     def get_quotes(self, ticker):
@@ -717,15 +1158,39 @@ class Simulator():
         }
         return quotes
 
-    def get_best_bid(self, ticker):
+    def get_best_bid(self, ticker:str) -&gt; LimitOrder:
+        &#34;&#34;&#34;retrieves the current best bid in the orderbook of an asset
+
+        Args:
+            ticker (str): the ticker of the asset.
+
+        Returns:
+            LimitOrder
+        &#34;&#34;&#34;
         if self.books[ticker].bids:
             return self.books[ticker].bids[0]
 
-    def get_best_ask(self, ticker):
+    def get_best_ask(self, ticker:str) -&gt; LimitOrder:
+        &#34;&#34;&#34;retrieves the current best ask in the orderbook of an asset
+
+        Args:
+            ticker (str): the ticker of the asset.
+
+        Returns:
+            LimitOrder
+        &#34;&#34;&#34;
         if self.books[ticker].asks:
             return self.books[ticker].asks[0]
 
-    def get_midprice(self, ticker):
+    def get_midprice(self, ticker:str) -&gt; float:
+        &#34;&#34;&#34;Returns the current midprice of the best bid and ask quotes.
+
+        Args:
+            ticker (str): the ticker of the asset
+
+        Returns:
+            float: the current midprice
+        &#34;&#34;&#34;
         quotes = self.get_quotes(ticker)
         return (quotes[&#39;bid_p&#39;] + quotes[&#39;ask_p&#39;]) / 2
 
@@ -864,88 +1329,186 @@ class Simulator():
 </details>
 </dd>
 <dt id="exchange.source.qmr_exchange.Exchange.create_asset"><code class="name flex">
-<span>def <span class="ident">create_asset</span></span>(<span>self, ticker: str, seed_price=100, seed_bid=None, seed_ask=None)</span>
+<span>def <span class="ident">create_asset</span></span>(<span>self, ticker: str, seed_price=100, seed_bid=0.99, seed_ask=1.01)</span>
 </code></dt>
 <dd>
-<div class="desc"></div>
+<div class="desc"><p><em>summary</em></p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>ticker</code></strong> :&ensp;<code>str</code></dt>
+<dd>the ticker of the new asset</dd>
+<dt><strong><code>seed_price</code></strong> :&ensp;<code>int</code>, optional</dt>
+<dd>Price of an initial trade that is created for ease of use. Defaults to 100.</dd>
+<dt><strong><code>seed_bid</code></strong> :&ensp;<code>float</code>, optional</dt>
+<dd>Limit price of an initial buy order, expressed as percentage of the seed_price. Defaults to .99.</dd>
+<dt><strong><code>seed_ask</code></strong> :&ensp;<code>float</code>, optional</dt>
+<dd>Limit price of an initial sell order, expressed as percentage of the seed_price. Defaults to 1.01.</dd>
+</dl></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def create_asset(self, ticker: str, seed_price=100, seed_bid=None, seed_ask=None):
+<pre><code class="python">def create_asset(self, ticker: str, seed_price=100, seed_bid=.99, seed_ask=1.01):
+    &#34;&#34;&#34;_summary_
+
+    Args:
+        ticker (str): the ticker of the new asset
+        seed_price (int, optional): Price of an initial trade that is created for ease of use. Defaults to 100.
+        seed_bid (float, optional): Limit price of an initial buy order, expressed as percentage of the seed_price. Defaults to .99.
+        seed_ask (float, optional): Limit price of an initial sell order, expressed as percentage of the seed_price. Defaults to 1.01.
+    &#34;&#34;&#34;
     self.books[ticker] = OrderBook(ticker)
-    seed_bid = seed_bid if seed_bid else seed_price * 0.99
-    seed_ask = seed_ask if seed_ask else seed_price * 1.01
     self._process_trade(ticker, 1, seed_price, &#39;init_seed&#39;, &#39;init_seed&#39;,)
     self.limit_buy(ticker, seed_bid, 10, &#39;init_seed&#39;)
     self.limit_sell(ticker, seed_ask, 10, &#39;init_seed&#39;)</code></pre>
 </details>
 </dd>
 <dt id="exchange.source.qmr_exchange.Exchange.get_best_ask"><code class="name flex">
-<span>def <span class="ident">get_best_ask</span></span>(<span>self, ticker)</span>
+<span>def <span class="ident">get_best_ask</span></span>(<span>self, ticker: str) ‑> <a title="exchange.source.qmr_exchange.LimitOrder" href="#exchange.source.qmr_exchange.LimitOrder">LimitOrder</a></span>
 </code></dt>
 <dd>
-<div class="desc"></div>
+<div class="desc"><p>retrieves the current best ask in the orderbook of an asset</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>ticker</code></strong> :&ensp;<code>str</code></dt>
+<dd>the ticker of the asset.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>LimitOrder</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def get_best_ask(self, ticker):
+<pre><code class="python">def get_best_ask(self, ticker:str) -&gt; LimitOrder:
+    &#34;&#34;&#34;retrieves the current best ask in the orderbook of an asset
+
+    Args:
+        ticker (str): the ticker of the asset.
+
+    Returns:
+        LimitOrder
+    &#34;&#34;&#34;
     if self.books[ticker].asks:
         return self.books[ticker].asks[0]</code></pre>
 </details>
 </dd>
 <dt id="exchange.source.qmr_exchange.Exchange.get_best_bid"><code class="name flex">
-<span>def <span class="ident">get_best_bid</span></span>(<span>self, ticker)</span>
+<span>def <span class="ident">get_best_bid</span></span>(<span>self, ticker: str) ‑> <a title="exchange.source.qmr_exchange.LimitOrder" href="#exchange.source.qmr_exchange.LimitOrder">LimitOrder</a></span>
 </code></dt>
 <dd>
-<div class="desc"></div>
+<div class="desc"><p>retrieves the current best bid in the orderbook of an asset</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>ticker</code></strong> :&ensp;<code>str</code></dt>
+<dd>the ticker of the asset.</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>LimitOrder</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def get_best_bid(self, ticker):
+<pre><code class="python">def get_best_bid(self, ticker:str) -&gt; LimitOrder:
+    &#34;&#34;&#34;retrieves the current best bid in the orderbook of an asset
+
+    Args:
+        ticker (str): the ticker of the asset.
+
+    Returns:
+        LimitOrder
+    &#34;&#34;&#34;
     if self.books[ticker].bids:
         return self.books[ticker].bids[0]</code></pre>
 </details>
 </dd>
 <dt id="exchange.source.qmr_exchange.Exchange.get_latest_trade"><code class="name flex">
-<span>def <span class="ident">get_latest_trade</span></span>(<span>self, ticker)</span>
+<span>def <span class="ident">get_latest_trade</span></span>(<span>self, ticker: str) ‑> <a title="exchange.source.qmr_exchange.Trade" href="#exchange.source.qmr_exchange.Trade">Trade</a></span>
 </code></dt>
 <dd>
-<div class="desc"></div>
+<div class="desc"><p>Retrieves the most recent trade of a given asset</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>ticker</code></strong> :&ensp;<code>str</code></dt>
+<dd>the ticker of the trade</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<p>Trade</p></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def get_latest_trade(self, ticker):
+<pre><code class="python">def get_latest_trade(self, ticker:str) -&gt; Trade:
+    &#34;&#34;&#34;Retrieves the most recent trade of a given asset
+
+    Args:
+        ticker (str): the ticker of the trade
+
+    Returns:
+        Trade
+    &#34;&#34;&#34;
     return next(trade for trade in self.trade_log[::-1] if trade.ticker == ticker)</code></pre>
 </details>
 </dd>
 <dt id="exchange.source.qmr_exchange.Exchange.get_midprice"><code class="name flex">
-<span>def <span class="ident">get_midprice</span></span>(<span>self, ticker)</span>
+<span>def <span class="ident">get_midprice</span></span>(<span>self, ticker: str) ‑> float</span>
 </code></dt>
 <dd>
-<div class="desc"></div>
+<div class="desc"><p>Returns the current midprice of the best bid and ask quotes.</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>ticker</code></strong> :&ensp;<code>str</code></dt>
+<dd>the ticker of the asset</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>float</code></dt>
+<dd>the current midprice</dd>
+</dl></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def get_midprice(self, ticker):
+<pre><code class="python">def get_midprice(self, ticker:str) -&gt; float:
+    &#34;&#34;&#34;Returns the current midprice of the best bid and ask quotes.
+
+    Args:
+        ticker (str): the ticker of the asset
+
+    Returns:
+        float: the current midprice
+    &#34;&#34;&#34;
     quotes = self.get_quotes(ticker)
     return (quotes[&#39;bid_p&#39;] + quotes[&#39;ask_p&#39;]) / 2</code></pre>
 </details>
 </dd>
 <dt id="exchange.source.qmr_exchange.Exchange.get_order_book"><code class="name flex">
-<span>def <span class="ident">get_order_book</span></span>(<span>self, ticker: str)</span>
+<span>def <span class="ident">get_order_book</span></span>(<span>self, ticker: str) ‑> <a title="exchange.source.qmr_exchange.OrderBook" href="#exchange.source.qmr_exchange.OrderBook">OrderBook</a></span>
 </code></dt>
 <dd>
-<div class="desc"></div>
+<div class="desc"><p>Returns the OrderBook of a given Asset</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>ticker</code></strong> :&ensp;<code>str</code></dt>
+<dd>the ticker of the asset</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code><a title="exchange.source.qmr_exchange.OrderBook" href="#exchange.source.qmr_exchange.OrderBook">OrderBook</a></code></dt>
+<dd>the orderbook of the asset.</dd>
+</dl></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def get_order_book(self, ticker: str):
+<pre><code class="python">def get_order_book(self, ticker: str) -&gt; OrderBook:
+    &#34;&#34;&#34;Returns the OrderBook of a given Asset
+
+    Args:
+        ticker (str): the ticker of the asset
+
+    Returns:
+        OrderBook: the orderbook of the asset.
+    &#34;&#34;&#34;
     return self.books[ticker]</code></pre>
 </details>
 </dd>
@@ -974,15 +1537,33 @@ class Simulator():
 </details>
 </dd>
 <dt id="exchange.source.qmr_exchange.Exchange.get_trades"><code class="name flex">
-<span>def <span class="ident">get_trades</span></span>(<span>self, ticker)</span>
+<span>def <span class="ident">get_trades</span></span>(<span>self, ticker: str) ‑> pandas.core.frame.DataFrame</span>
 </code></dt>
 <dd>
-<div class="desc"></div>
+<div class="desc"><p>Retrieves all past trades of a given asset</p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>ticker</code></strong> :&ensp;<code>str</code></dt>
+<dd>the ticker of the asset</dd>
+</dl>
+<h2 id="returns">Returns</h2>
+<dl>
+<dt><code>pd.DataFrame</code></dt>
+<dd>a dataframe containing all trades</dd>
+</dl></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
-<pre><code class="python">def get_trades(self, ticker):
+<pre><code class="python">def get_trades(self, ticker:str) -&gt; pd.DataFrame:
+    &#34;&#34;&#34;Retrieves all past trades of a given asset
+
+    Args:
+        ticker (str): the ticker of the asset
+
+    Returns:
+        pd.DataFrame: a dataframe containing all trades
+    &#34;&#34;&#34;
     return pd.DataFrame.from_records([t.to_dict() for t in self.trade_log if t.ticker == ticker]).set_index(&#39;dt&#39;).sort_index()</code></pre>
 </details>
 </dd>
@@ -1111,6 +1692,7 @@ class Simulator():
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">class LimitOrder():
+
     def __init__(self, ticker, price, qty, creator, side, dt=None):
         self.id = get_random_string()
         self.ticker: str = ticker
@@ -1162,16 +1744,29 @@ class Simulator():
 </dd>
 <dt id="exchange.source.qmr_exchange.OrderBook"><code class="flex name class">
 <span>class <span class="ident">OrderBook</span></span>
-<span>(</span><span>ticker)</span>
+<span>(</span><span>ticker: str)</span>
 </code></dt>
 <dd>
-<div class="desc"></div>
+<div class="desc"><p>An OrderBook contains all the relevant trading data of a given asset. It contains the list of bids and asks, ordered by their place in the queue.</p>
+<p><em>summary</em></p>
+<h2 id="args">Args</h2>
+<dl>
+<dt><strong><code>ticker</code></strong> :&ensp;<code>str</code></dt>
+<dd>the corresponding asset that is going to be traded in the OrderBook.</dd>
+</dl></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">class OrderBook():
-    def __init__(self, ticker):
+    &#34;&#34;&#34;An OrderBook contains all the relevant trading data of a given asset. It contains the list of bids and asks, ordered by their place in the queue.
+    &#34;&#34;&#34;
+    def __init__(self, ticker:str):
+        &#34;&#34;&#34;_summary_
+
+        Args:
+            ticker (str): the corresponding asset that is going to be traded in the OrderBook.
+        &#34;&#34;&#34;
         self.ticker = ticker
         self.bids: List[LimitOrder] = []
         self.asks: List[LimitOrder] = []
@@ -1185,11 +1780,11 @@ class Simulator():
 
 
     @property
-    def df(self):
+    def df(self) -&gt; dict:
         &#34;&#34;&#34;_summary_
 
         Returns:
-            _type_: _description_
+            dict: dictionary with two dataframes corresponding to the bids and asks of the OrderBook
         &#34;&#34;&#34;
         return {
             &#39;bids&#39;: pd.DataFrame.from_records([b.to_dict() for b in self.bids]),
@@ -1198,24 +1793,24 @@ class Simulator():
 </details>
 <h3>Instance variables</h3>
 <dl>
-<dt id="exchange.source.qmr_exchange.OrderBook.df"><code class="name">var <span class="ident">df</span></code></dt>
+<dt id="exchange.source.qmr_exchange.OrderBook.df"><code class="name">var <span class="ident">df</span> : dict</code></dt>
 <dd>
 <div class="desc"><p><em>summary</em></p>
 <h2 id="returns">Returns</h2>
 <dl>
-<dt><code>_type_</code></dt>
-<dd><em>description</em></dd>
+<dt><code>dict</code></dt>
+<dd>dictionary with two dataframes corresponding to the bids and asks of the OrderBook</dd>
 </dl></div>
 <details class="source">
 <summary>
 <span>Expand source code</span>
 </summary>
 <pre><code class="python">@property
-def df(self):
+def df(self) -&gt; dict:
     &#34;&#34;&#34;_summary_
 
     Returns:
-        _type_: _description_
+        dict: dictionary with two dataframes corresponding to the bids and asks of the OrderBook
     &#34;&#34;&#34;
     return {
         &#39;bids&#39;: pd.DataFrame.from_records([b.to_dict() for b in self.bids]),
