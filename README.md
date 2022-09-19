@@ -6,8 +6,8 @@
 </p> -->
 
 # 🚀qmrExchange🚀
-Quantitative Methods Research - QMR
-** [🌐 Company Website](www.qmr.ai) / [🗎 Documentation](https://qmresearch.github.io/qmrExchange/source/index.html)
+** Quantitative Methods Research - QMR **
+** [🌐 Company Website](www.qmr.ai) / [🗎 Documentation](https://qmresearch.github.io/qmrExchange/source/index.html) ** 
 
 - [🚀qmrExchange🚀](#qmrexchange)
   - [qmrExchange Overview](#qmrexchange-overview)
