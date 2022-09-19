@@ -1,7 +1,6 @@
 from datetime import datetime
 from decimal import Decimal
 from typing import List
-from urllib.parse import quote_plus
 import pandas as pd
 from enum import Enum
 from ._utils import get_datetime_range, get_random_string
