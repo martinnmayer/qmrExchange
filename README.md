@@ -136,12 +136,5 @@ plot_bars(df_15min)
 ```
 
 
-````{=html}
-```{r, echo=FALSE, results='asis'}
-xfun::file_string('misc/example_plot.html')
-```
-````
+![image info](misc/plot.png)
 
-```{r, echo=FALSE}
-htmltools::includeHTML("test.html")
-```
