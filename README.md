@@ -5,7 +5,21 @@
     <img width="33%" src="https://www.qmr.ai/wp-content/uploads/2022/03/qmr_logo.png">
 </p> -->
 
-# qmrExchange
+# 🚀qmrExchange (www.qmr.ai)🚀
+
+- [🚀qmrExchange (www.qmr.ai)🚀](#qmrexchange-wwwqmrai)
+  - [qmrExchange Overview](#qmrexchange-overview)
+  - [Use cases for qmrExchange](#use-cases-for-qmrexchange)
+  - [Potential Research Topics with qmrExchange](#potential-research-topics-with-qmrexchange)
+    - [Market-Making Algorithms](#market-making-algorithms)
+    - [Optimal Execution Algorithms](#optimal-execution-algorithms)
+    - [Adversarial Algorithms](#adversarial-algorithms)
+  - [Basig usage of qmrExchange](#basig-usage-of-qmrexchange)
+    - [Import required libraries](#import-required-libraries)
+    - [Declare basic parameters for the simulation](#declare-basic-parameters-for-the-simulation)
+    - [Instantiate a Simulator](#instantiate-a-simulator)
+    - [Add trading agents](#add-trading-agents)
+    - [Run the simulation](#run-the-simulation)
 
 ## qmrExchange Overview
 The qmrExchange project is an open-source financial markets exchange simulator that realistically mimics all the main components of modern trading venues. It allows us to test and quantify the behavior of different agents in a laboratory and isolated environment without the high noise-to-signal ratio that is otherwise unavoidable in live settings.
