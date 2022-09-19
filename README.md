@@ -5,9 +5,11 @@
     <img width="33%" src="https://www.qmr.ai/wp-content/uploads/2022/03/qmr_logo.png">
 </p> -->
 
-# 🚀qmrExchange (www.qmr.ai)🚀
+# 🚀qmrExchange🚀
+Quantitative Methods Research - QMR
+** [🌐 Company Website](www.qmr.ai) / [🗎 Documentation](https://qmresearch.github.io/qmrExchange/source/index.html)
 
-- [🚀qmrExchange (www.qmr.ai)🚀](#qmrexchange-wwwqmrai)
+- [🚀qmrExchange🚀](#qmrexchange)
   - [qmrExchange Overview](#qmrexchange-overview)
   - [Use cases for qmrExchange](#use-cases-for-qmrexchange)
   - [Potential Research Topics with qmrExchange](#potential-research-topics-with-qmrexchange)
