@@ -160,3 +160,4 @@ cython_debug/
 #.idea/
 
 local_ignore/
+doc_maker_master.py
