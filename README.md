@@ -22,6 +22,7 @@
     - [Instantiate a Simulator](#instantiate-a-simulator)
     - [Add trading agents](#add-trading-agents)
     - [Run the simulation](#run-the-simulation)
+  - [Project Documentation](#project-documentation)
 
 ## qmrExchange Overview
 The qmrExchange project is an open-source financial markets exchange simulator that realistically mimics all the main components of modern trading venues. It allows us to test and quantify the behavior of different agents in a laboratory and isolated environment without the high noise-to-signal ratio that is otherwise unavoidable in live settings.
@@ -153,4 +154,8 @@ plot_bars(df_15min)
 
 
 ![image info](misc/plot.png)
+
+## Project Documentation
+In order to further explore the project, take a look at our documentation:
+[🗎 Documentation](https://qmresearch.github.io/qmrExchange/source/index.html)
 
