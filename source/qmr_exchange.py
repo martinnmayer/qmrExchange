@@ -117,8 +117,8 @@ class Exchange():
         """
         self.books[ticker] = OrderBook(ticker)
         self._process_trade(ticker, 1, seed_price, 'init_seed', 'init_seed',)
-        self.limit_buy(ticker, seed_bid, 10, 'init_seed')
-        self.limit_sell(ticker, seed_ask, 10, 'init_seed')
+        self.limit_buy(ticker, seed_price * seed_bid, 10, 'init_seed')
+        self.limit_sell(ticker, seed_price * seed_ask, 10, 'init_seed')
 
 
     def get_order_book(self, ticker: str) -> OrderBook:
