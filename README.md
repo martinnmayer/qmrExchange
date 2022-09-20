@@ -49,7 +49,7 @@ Much like in the spirit of General Adversarial Networks and Game Theory, an impl
 ## Basig usage of qmrExchange
 ### Import required libraries
 
-```
+```python
 from source.qmr_exchange import Exchange
 from random import Random
 from source.qmr_exchange import Exchange, Simulator
@@ -60,7 +60,7 @@ from datetime import datetime
 ### Declare basic parameters for the simulation
 qmrExchange allows for simulating multiple tickers at once, for statistical arbitrage and high-frequency-trading simulations. In the present case, we simulate 1 week worth of 1 minute data (24/7 trading).
 
-```
+```python
 from_date = datetime(2022,1,1)
 to_date = datetime(2022,1,7)
 time_interval = 'minute'
@@ -69,7 +69,7 @@ tickers = ['XYZ']
 
 ### Instantiate a Simulator
 
-```
+```python
 sim = Simulator(from_date, to_date,time_interval)
 sim.exchange.create_asset(tickers[0])
 ```
@@ -78,7 +78,7 @@ sim.exchange.create_asset(tickers[0])
 - We add a few naive market makers that create both buy and sell orders in each period. They set the price based on the last traded price and the specified spread percentage.
 - We add a market taker that randomly buys and sells (based on the defined probabilities) on each period by means of market ordes (hence the word 'taker').
 
-```
+```python
 mm1 = NaiveMarketMaker(name='market_maker1', tickers=tickers, aum=10_000, spread_pct=0.005, qty_per_order=1)
 mm2 = NaiveMarketMaker(name='market_maker2', tickers=tickers, aum=10_000, spread_pct=0.006,qty_per_order=1)
 mm3 = NaiveMarketMaker(name='market_maker3', tickers=tickers, aum=10_000, spread_pct=0.007, qty_per_order=1)
@@ -95,13 +95,13 @@ sim.add_agent(mt)
 
 ### Run the simulation
 
-```
+```python
 sim.run()
 ```
 
 Retrieve all executed trades of our simulation
 
-```
+```python
 sim.trades
 ```
 
@@ -124,7 +124,7 @@ Output:
 
 Group asset price in fixed 15 Minute OHLCV Bars
 
-```
+```python
 df_15min = sim.get_price_bars(bar_size='15Min')
 ```
 
@@ -147,7 +147,7 @@ Output:
 
 Create a candlestick plot of the aggregated bar data
 
-```
+```python
 from source.helpers import plot_bars
 plot_bars(df_15min)
 ```
