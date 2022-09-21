@@ -303,6 +303,18 @@ class Exchange():
         self.books[ticker].bids = [
             bid for bid in self.books[ticker].bids if bid.qty > 0]
 
+
+    def get_price_bars(self, bar_size='1D'):
+        df = self.trades.resample(bar_size).agg({'price': 'ohlc', 'qty': 'sum'})
+        df.columns = df.columns.droplevel()
+        df.rename(columns={'qty':'volume'},inplace=True)
+        return df
+
+    @property
+    def trades(self):
+        return pd.DataFrame.from_records([t.to_dict() for t in self.trade_log]).set_index('dt')
+
+
     def _set_datetime(self, dt):
         self.datetime = dt
 
@@ -455,6 +467,13 @@ class Agent():
         """
         self.exchange.cancel_all_orders(self.name,ticker)
 
+
+    def get_price_bars(self, bar_size='1D'):
+        df = self.trades.resample(bar_size).agg({'price': 'ohlc', 'qty': 'sum'})
+        df.columns = df.columns.droplevel()
+        df.rename(columns={'qty':'volume'},inplace=True)
+        return df
+
     def next(self):  
         pass
 
@@ -487,14 +506,11 @@ class Simulator():
                 break
 
     def get_price_bars(self, bar_size='1D'):
-        df = self.trades.resample(bar_size).agg({'price': 'ohlc', 'qty': 'sum'})
-        df.columns = df.columns.droplevel()
-        df.rename(columns={'qty':'volume'},inplace=True)
-        return df
+        return self.exchange.get_price_bars(bar_size)
 
     @property
     def trades(self):
-        return pd.DataFrame.from_records([t.to_dict() for t in self.exchange.trade_log]).set_index('dt')
+        return self.exchange.trades
 
     def __update_agents_aum(self):
         for update in self.exchange.agents_aum_updates:
