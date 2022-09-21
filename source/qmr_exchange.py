@@ -469,10 +469,8 @@ class Agent():
 
 
     def get_price_bars(self, bar_size='1D'):
-        df = self.trades.resample(bar_size).agg({'price': 'ohlc', 'qty': 'sum'})
-        df.columns = df.columns.droplevel()
-        df.rename(columns={'qty':'volume'},inplace=True)
-        return df
+        return  self.exchange.get_price_bars(bar_size)
+
 
     def next(self):  
         pass
