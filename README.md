@@ -1,5 +1,5 @@
 
-
+https://img.shields.io/twitter/url?url=https%3A%2F%2Ftwitter.com%2FQMRMayer
 
 <!-- <p align="center" background-color='red' width="100%">
     <img width="33%" src="https://www.qmr.ai/wp-content/uploads/2022/03/qmr_logo.png">
