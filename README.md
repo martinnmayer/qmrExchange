@@ -1,5 +1,4 @@
 
-https://img.shields.io/twitter/url?url=https%3A%2F%2Ftwitter.com%2FQMRMayer
 
 <!-- <p align="center" background-color='red' width="100%">
     <img width="33%" src="https://www.qmr.ai/wp-content/uploads/2022/03/qmr_logo.png">
@@ -7,7 +6,11 @@ https://img.shields.io/twitter/url?url=https%3A%2F%2Ftwitter.com%2FQMRMayer
 
 # 🚀qmrExchange🚀
 **Quantitative Methods Research - QMR**
-**[🌐 Company Website](https://www.qmr.ai) / [🗎 Documentation](https://qmresearch.github.io/qmrExchange/source/index.html)** 
+
+**[🌐 Company Website](https://www.qmr.ai) / [🗎 Documentation](https://qmresearch.github.io/qmrExchange/source/index.html)**  
+![GitHub Repo stars](https://img.shields.io/github/stars/QMResearch/qmrExchange?style=social)
+![Twitter URL](https://img.shields.io/twitter/url?url=https%3A%2F%2Ftwitter.com%2FQMRMayer)
+![YouTube Channel Subscribers](https://img.shields.io/youtube/channel/subscribers/UC_QUSm4desE-V3o68ovcZWg)
 
 - [🚀qmrExchange🚀](#qmrexchange)
   - [qmrExchange Overview](#qmrexchange-overview)
