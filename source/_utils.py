@@ -1,6 +1,15 @@
 from datetime import timedelta
 import random, string
 
+
+def get_pandas_time(time_unit):
+    return {
+        'second': '1s',
+        'minute': '1Min',
+        'hour': '1H',
+        'day': '1Day',
+    }[time_unit]
+
 def get_timedelta(time_unit):
     return {
         'second': timedelta(seconds=1),
