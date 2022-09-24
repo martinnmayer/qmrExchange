@@ -3,7 +3,7 @@ from decimal import Decimal
 from typing import List, Union
 import pandas as pd
 from enum import Enum
-from ._utils import get_datetime_range, get_random_string
+from ._utils import get_datetime_range, get_random_string, get_pandas_time
 
 class OrderSide(Enum):
     BUY = 'buy'
@@ -101,7 +101,7 @@ class Exchange():
         self.books = {}
         self.trade_log: List[Trade] = []
         self.datetime = datetime
-        self.agents_aum_updates = []
+        self.agents_cash_updates = []
 
     def __str__(self):
         return ', '.join(ob for ob in self.books)
@@ -117,8 +117,8 @@ class Exchange():
         """
         self.books[ticker] = OrderBook(ticker)
         self._process_trade(ticker, 1, seed_price, 'init_seed', 'init_seed',)
-        self.limit_buy(ticker, seed_price * seed_bid, 10, 'init_seed')
-        self.limit_sell(ticker, seed_price * seed_ask, 10, 'init_seed')
+        self.limit_buy(ticker, seed_price * seed_bid, 1, 'init_seed')
+        self.limit_sell(ticker, seed_price * seed_ask, 1, 'init_seed')
 
 
     def get_order_book(self, ticker: str) -> OrderBook:
@@ -136,7 +136,12 @@ class Exchange():
         self.trade_log.append(
             Trade(ticker, qty, price, buyer, seller,self.datetime)
         )
-        self.agents_aum_updates.extend([[buyer,-qty*price],[seller,qty*price]])
+        # self.agents_cash_updates.extend([[buyer,-qty*price],[seller,qty*price]])
+        print(self.datetime,'/ cashflow:', qty*price,"/ price:",price,'/ qty:',qty)
+        self.agents_cash_updates.extend([
+            {'agent':buyer,'cash_flow':-qty*price,'ticker':ticker,'qty': qty},
+            {'agent':seller,'cash_flow':qty*price,'ticker':ticker,'qty': -qty}
+        ])
         
     
 
@@ -304,8 +309,10 @@ class Exchange():
             bid for bid in self.books[ticker].bids if bid.qty > 0]
 
 
-    def get_price_bars(self, bar_size='1D'):
-        df = self.trades.resample(bar_size).agg({'price': 'ohlc', 'qty': 'sum'})
+    def get_price_bars(self, ticker, bar_size='1D'):
+        trades = self.trades
+        trades = trades[trades['ticker']== ticker]
+        df = trades.resample(bar_size).agg({'price': 'ohlc', 'qty': 'sum'})
         df.columns = df.columns.droplevel()
         df.rename(columns={'qty':'volume'},inplace=True)
         return df
@@ -327,7 +334,9 @@ class Agent():
         self.name = name
         self.tickers = tickers
         self.exchange:Exchange = None
-        self.aum = aum
+        self.cash = aum
+        self.initial_cash = aum
+        self._transactions = []
 
     def __repr__(self):
         return f'<Agent: {self.name}>'
@@ -445,6 +454,19 @@ class Agent():
         """
         return self.exchange.limit_sell(ticker,price,qty,self.name)
 
+
+    def get_position(self,ticker):
+        return sum(t['qty'] for t in self._transactions if t['ticker'] == ticker)
+
+    def get_cash_history(self):
+        return pd.DataFrame(self.__cash_history).set_index('dt')
+
+    @property
+    def trades(self):
+        trades = self.exchange.trades
+        trades = trades[trades[['buyer','seller']].isin([self.name]).any(axis=1)]
+        return trades
+
     def _set_exchange(self,exchange):
         self.exchange = exchange
 
@@ -481,6 +503,12 @@ class Simulator():
         self.dt = from_date
         self.agents = []
         self.exchange = Exchange(datetime=from_date)
+        self._from_date = from_date
+        self._to_date = to_date
+        self._time_unit = time_unit
+
+        # Move to first dt for easier postprocessing holdings
+        next(self.datetime_range)
 
     
     def add_agent(self,agent:Agent):
@@ -490,11 +518,11 @@ class Simulator():
 
     def next(self):
         try:
+            self.dt = next(self.datetime_range)
             self.exchange._set_datetime(self.dt)
             for agent in self.agents:
                 agent.next()
-            self.dt = next(self.datetime_range)
-            self.__update_agents_aum()
+            self.__update_agents_cash()
             return True
         except StopIteration:
             return False
@@ -503,21 +531,40 @@ class Simulator():
             if not self.next():
                 break
 
-    def get_price_bars(self, bar_size='1D'):
-        return self.exchange.get_price_bars(bar_size)
+    def get_price_bars(self, ticker, bar_size='1D'):
+        return self.exchange.get_price_bars(ticker, bar_size)
+
+    def get_portfolio_history(self,agent):
+        agent = self.get_agent(agent)
+        portfolio = pd.DataFrame(index=self.datetime_range)
+        transactions = pd.DataFrame(agent._transactions).set_index('dt')
+        bar_size =  get_pandas_time(self._time_unit)
+        for ticker in list(self.exchange.books.keys()):
+            qty_asset = pd.DataFrame(transactions[transactions['ticker']==ticker]['qty'])
+            qty_asset = qty_asset.resample(bar_size).agg('sum').cumsum()
+            price = pd.DataFrame(self.get_price_bars(ticker=ticker,bar_size=bar_size)['close'].ffill())
+            portfolio[ticker] = (price['close'] * qty_asset['qty'])
+        portfolio['cash'] = transactions['cash_flow'].resample(bar_size).agg('sum').ffill().cumsum()
+        portfolio.fillna(0,inplace=True)
+        portfolio['cash'] += agent.initial_cash
+        portfolio['aum'] = portfolio.sum(axis=1)
+        return portfolio
 
     @property
     def trades(self):
         return self.exchange.trades
 
-    def __update_agents_aum(self):
-        for update in self.exchange.agents_aum_updates:
-            agent_idx = self.__get_agent_index(update[0])
+    def __update_agents_cash(self):
+        for update in self.exchange.agents_cash_updates:
+            agent_idx = self.__get_agent_index(update['agent'])
             # Check if not None because initial seed is not an agent
-            if agent_idx:
-                self.agents[agent_idx].aum += update[1]
-        self.exchange.agents_aum_updates = []
+            if agent_idx is not None:
+                self.agents[agent_idx].cash += update['cash_flow']
+                self.agents[agent_idx]._transactions.append({'dt':self.dt,'cash_flow':update['cash_flow'],'ticker':update['ticker'],'qty':update['qty']})
+        self.exchange.agents_cash_updates = []
 
+    def get_agent(self, agent_name):
+        return next((d for (index, d) in enumerate(self.agents) if d.name == agent_name), None)
 
     def __get_agent_index(self,agent_name):
         return next((index for (index, d) in enumerate(self.agents) if d.name == agent_name), None)
