@@ -14,11 +14,13 @@ class RandomMarketTaker(Agent):
     
     def next(self):
         for ticker in self.tickers:
-            action = random.choices(['buy','sell',None],weights=[.4,.4,.8])[0]
+            action = random.choices(
+                ['buy','close',None], weights=[self.prob_buy, self.prob_sell, 1 - self.prob_buy - self.prob_sell])[0]
             if action == 'buy':
                 self.market_buy(ticker,self.qty_per_order)
-            elif action == 'sell':
-                self.exchange.market_sell(ticker,self.qty_per_order,self.name)
+            elif action == 'close':
+                print(self.get_position(ticker))
+                self.exchange.market_sell(ticker,self.get_position(ticker),self.name)
 
 
 class NaiveMarketMaker(Agent):
