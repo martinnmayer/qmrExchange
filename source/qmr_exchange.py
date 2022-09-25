@@ -136,8 +136,6 @@ class Exchange():
         self.trade_log.append(
             Trade(ticker, qty, price, buyer, seller,self.datetime)
         )
-        # self.agents_cash_updates.extend([[buyer,-qty*price],[seller,qty*price]])
-        print(self.datetime,'/ cashflow:', qty*price,"/ price:",price,'/ qty:',qty)
         self.agents_cash_updates.extend([
             {'agent':buyer,'cash_flow':-qty*price,'ticker':ticker,'qty': qty},
             {'agent':seller,'cash_flow':qty*price,'ticker':ticker,'qty': -qty}
