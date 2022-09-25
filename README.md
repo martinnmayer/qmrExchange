@@ -22,6 +22,7 @@
     - [Instantiate a Simulator](#instantiate-a-simulator)
     - [Add trading agents](#add-trading-agents)
     - [Run the simulation](#run-the-simulation)
+    - [Plot the results](#plot-the-results)
   - [Project Documentation](#project-documentation)
 
 ## qmrExchange Overview
@@ -58,11 +59,11 @@ from datetime import datetime
 ```
 
 ### Declare basic parameters for the simulation
-qmrExchange allows for simulating multiple tickers at once, for statistical arbitrage and high-frequency-trading simulations. In the present case, we simulate 1 week worth of 1 minute data (24/7 trading).
+qmrExchange allows for simulating multiple tickers at once, for statistical arbitrage and high-frequency-trading simulations. In the present case, we simulate 2 weeks worth of 1 minute data (24/7 trading).
 
 ```python
 from_date = datetime(2022,1,1)
-to_date = datetime(2022,1,7)
+to_date = datetime(2022,1,15)
 time_interval = 'minute'
 tickers = ['XYZ']
 ```
@@ -75,21 +76,15 @@ sim.exchange.create_asset(tickers[0])
 ```
 
 ### Add trading agents
-- We add a few naive market makers that create both buy and sell orders in each period. They set the price based on the last traded price and the specified spread percentage.
+- We add a naive market maker that creates both buy and sell orders in each period. It quotes buy and sell prices based on the last traded price and the specified spread percentage.
 - We add a market taker that randomly buys and sells (based on the defined probabilities) on each period by means of market ordes (hence the word 'taker').
 
+
 ```python
-mm1 = NaiveMarketMaker(name='market_maker1', tickers=tickers, aum=10_000, spread_pct=0.005, qty_per_order=1)
-mm2 = NaiveMarketMaker(name='market_maker2', tickers=tickers, aum=10_000, spread_pct=0.006,qty_per_order=1)
-mm3 = NaiveMarketMaker(name='market_maker3', tickers=tickers, aum=10_000, spread_pct=0.007, qty_per_order=1)
-mm4 = NaiveMarketMaker(name='market_maker4', tickers=tickers, aum=10_000, spread_pct=0.01, qty_per_order=1)
+mm = NaiveMarketMaker(name='market_maker', tickers=tickers, aum=1_000, spread_pct=0.005, qty_per_order=4)
+sim.add_agent(mm)
 
-sim.add_agent(mm1)
-sim.add_agent(mm2)
-sim.add_agent(mm3)
-sim.add_agent(mm4)
-
-mt = RandomMarketTaker(name='market_taker', tickers=tickers, aum=10_1000, prob_buy=.2, prob_sell=.2, qty_per_order=2)
+mt = RandomMarketTaker(name='market_taker', tickers=tickers, aum=1_000, prob_buy=.2, prob_sell=.2, qty_per_order=1,seed=42)
 sim.add_agent(mt)
 ```
 
@@ -106,26 +101,35 @@ sim.trades
 ```
 
 ```
-Output:
-
-| dt                  | ticker   |   qty |   price | buyer         | seller        |
-|:--------------------|:---------|------:|--------:|:--------------|:--------------|
-| 2022-01-01 00:00:00 | XYZ      |     1 |  100    | init_seed     | init_seed     |
-| 2022-01-01 00:00:00 | XYZ      |     1 |   99.75 | market_maker1 | market_taker  |
-| 2022-01-01 00:00:00 | XYZ      |     1 |   99.7  | market_maker2 | market_taker  |
-| 2022-01-01 00:01:00 | XYZ      |     1 |   99.95 | market_taker  | market_maker1 |
-| 2022-01-01 00:01:00 | XYZ      |     1 |  100    | market_taker  | market_maker2 |
-| 2022-01-01 00:05:00 | XYZ      |     1 |   99.75 | market_maker1 | market_taker  |
-| 2022-01-01 00:05:00 | XYZ      |     1 |   99.7  | market_maker2 | market_taker  |
-| 2022-01-01 00:09:00 | XYZ      |     1 |   99.95 | market_taker  | market_maker1 |
-| 2022-01-01 00:09:00 | XYZ      |     1 |  100    | market_taker  | market_maker2 |
-| 2022-01-01 00:10:00 | XYZ      |     1 |  100.25 | market_taker  | market_maker1 |
+| dt                  | ticker   |   qty |   price | buyer        | seller       |
+|:--------------------|:---------|------:|--------:|:-------------|:-------------|
+| 2022-01-01 00:00:00 | XYZ      |     1 |  100    | init_seed    | init_seed    |
+| 2022-01-01 00:04:00 | XYZ      |     1 |  100.25 | market_taker | market_maker |
+| 2022-01-01 00:10:00 | XYZ      |     1 |  100    | market_maker | market_taker |
+| 2022-01-01 00:11:00 | XYZ      |     0 |   99.75 | market_maker | market_taker |
+| 2022-01-01 00:13:00 | XYZ      |     0 |   99.5  | market_maker | market_taker |
+| 2022-01-01 00:14:00 | XYZ      |     0 |   99.25 | market_maker | market_taker |
+| 2022-01-01 00:15:00 | XYZ      |     1 |   99.5  | market_taker | market_maker |
+| 2022-01-01 00:16:00 | XYZ      |     1 |   99.75 | market_taker | market_maker |
+| 2022-01-01 00:18:00 | XYZ      |     2 |   99.5  | market_maker | market_taker |
+| 2022-01-01 00:19:00 | XYZ      |     0 |   99.25 | market_maker | market_taker |
+| 2022-01-01 00:20:00 | XYZ      |     0 |   99    | init_seed    | market_taker |
+| 2022-01-01 00:21:00 | XYZ      |     1 |   99.25 | market_taker | market_maker |
+| 2022-01-01 00:22:00 | XYZ      |     1 |   99    | init_seed    | market_taker |
+| 2022-01-01 00:24:00 | XYZ      |     1 |   99.25 | market_taker | market_maker |
+| 2022-01-01 00:25:00 | XYZ      |     1 |   99.5  | market_taker | market_maker |
+| 2022-01-01 00:27:00 | XYZ      |     2 |   99.25 | market_maker | market_taker |
+| 2022-01-01 00:28:00 | XYZ      |     1 |   99.5  | market_taker | market_maker |
+| 2022-01-01 00:30:00 | XYZ      |     1 |   99.25 | market_maker | market_taker |
+| 2022-01-01 00:38:00 | XYZ      |     0 |   99    | market_maker | market_taker |
+| 2022-01-01 00:39:00 | XYZ      |     0 |   98.75 | market_maker | market_taker |
 ```
 
 Group asset price in fixed 15 Minute OHLCV Bars
 
 ```python
-df_15min = sim.get_price_bars(bar_size='15Min')
+df_15min = sim.get_price_bars(ticker=tickers[0],bar_size='15Min')
+df_15min
 ```
 
 ```
@@ -133,27 +137,86 @@ Output:
 
 | dt                  |   open |   high |   low |   close |   volume |
 |:--------------------|-------:|-------:|------:|--------:|---------:|
-| 2022-01-01 00:00:00 | 100    |  100.9 |  99.7 |   100.9 |       15 |
-| 2022-01-01 00:15:00 | 100.65 |  101   | 100.6 |   101   |       16 |
-| 2022-01-01 00:30:00 | 100.75 |  101.3 | 100.7 |   101.3 |       14 |
-| 2022-01-01 00:45:00 | 101.05 |  101.6 |  99.8 |    99.8 |       18 |
-| 2022-01-01 01:00:00 | 100.05 |  100.1 |  99.2 |    99.2 |       12 |
-| 2022-01-01 01:15:00 |  99.45 |   99.9 |  99   |    99   |       18 |
-| 2022-01-01 01:30:00 |  99    |   99.9 |  99   |    99.9 |       16 |
-| 2022-01-01 01:45:00 | 100.15 |  100.2 |  98.7 |    98.7 |       12 |
-| 2022-01-01 02:00:00 |  98.95 |   99.3 |  98.7 |    99.3 |        8 |
-| 2022-01-01 02:15:00 |  99.05 |   99.3 |  98.7 |    99   |       10 |
+| 2022-01-01 00:00:00 | 100    | 100.25 | 99.25 |   99.25 |        3 |
+| 2022-01-01 00:15:00 |  99.5  |  99.75 | 99    |   99.5  |       11 |
+| 2022-01-01 00:30:00 |  99.25 |  99.25 | 98.5  |   98.75 |        2 |
+| 2022-01-01 00:45:00 |  98.5  |  98.5  | 98    |   98.24 |        2 |
+| 2022-01-01 01:00:00 |  97.99 |  98.73 | 97.99 |   98.23 |        9 |
+| 2022-01-01 01:15:00 |  98.48 |  99.23 | 98.48 |   99.23 |       11 |
+| 2022-01-01 01:30:00 |  99.48 | 100.23 | 99.48 |   99.73 |        9 |
+| 2022-01-01 01:45:00 |  99.48 |  99.48 | 98.98 |   98.98 |        2 |
+| 2022-01-01 02:00:00 |  99.23 |  99.73 | 98.73 |   99.73 |        9 |
+| 2022-01-01 02:15:00 |  99.48 |  99.48 | 98.73 |   98.73 |        5 |
+| 2022-01-01 02:30:00 |  98.98 |  99.73 | 98.98 |   99.23 |       10 |
+| 2022-01-01 02:45:00 |  98.98 |  99.98 | 98.98 |   99.73 |        8 |
+| 2022-01-01 03:00:00 |  99.98 |  99.98 | 99.73 |   99.73 |        4 |
+| 2022-01-01 03:15:00 |  99.48 |  99.73 | 99.48 |   99.73 |        5 |
+| 2022-01-01 03:30:00 |  99.48 |  99.73 | 98.98 |   99.73 |        4 |
+| 2022-01-01 03:45:00 |  99.48 |  99.73 | 99.23 |   99.23 |        5 |
+| 2022-01-01 04:00:00 |  99.48 |  99.73 | 99.23 |   99.73 |        9 |
+| 2022-01-01 04:15:00 |  99.98 |  99.98 | 99.23 |   99.48 |        7 |
+| 2022-01-01 04:30:00 |  99.23 |  99.73 | 98.98 |   99.73 |        5 |
+| 2022-01-01 04:45:00 |  99.98 | 100.23 | 99.73 |   99.73 |        7 |
 ```
 
-Create a candlestick plot of the aggregated bar data
+Retrieve a dataframe of an agents holding at each period of time
+```python
+mt_holdings = sim.get_portfolio_history('market_taker')
+mm_holdings = sim.get_portfolio_history('market_maker')
+```
+
+```
+| dt                  |    XYZ |    cash |     aum |
+|:--------------------|-------:|--------:|--------:|
+| 2022-01-01 00:00:00 |   0    | 1000    | 1000    |
+| 2022-01-01 00:01:00 |   0    | 1000    | 1000    |
+| 2022-01-01 00:02:00 |   0    | 1000    | 1000    |
+| 2022-01-01 00:03:00 |   0    | 1000    | 1000    |
+| 2022-01-01 00:04:00 | 100.25 |  899.75 | 1000    |
+| 2022-01-01 00:05:00 | 100.25 |  899.75 | 1000    |
+| 2022-01-01 00:06:00 | 100.25 |  899.75 | 1000    |
+| 2022-01-01 00:07:00 | 100.25 |  899.75 | 1000    |
+| 2022-01-01 00:08:00 | 100.25 |  899.75 | 1000    |
+| 2022-01-01 00:09:00 | 100.25 |  899.75 | 1000    |
+| 2022-01-01 00:10:00 |   0    |  999.75 |  999.75 |
+| 2022-01-01 00:11:00 |   0    |  999.75 |  999.75 |
+| 2022-01-01 00:12:00 |   0    |  999.75 |  999.75 |
+| 2022-01-01 00:13:00 |   0    |  999.75 |  999.75 |
+| 2022-01-01 00:14:00 |   0    |  999.75 |  999.75 |
+| 2022-01-01 00:15:00 |  99.5  |  900.25 |  999.75 |
+| 2022-01-01 00:16:00 | 199.5  |  800.5  | 1000    |
+| 2022-01-01 00:17:00 | 199.5  |  800.5  | 1000    |
+| 2022-01-01 00:18:00 |   0    |  999.5  |  999.5  |
+| 2022-01-01 00:19:00 |   0    |  999.5  |  999.5  |
+```
+
+### Plot the results
+
+Create a candlestick chart for the asset price.
 
 ```python
 from source.helpers import plot_bars
+df_15min = sim.get_price_bars(ticker=tickers[0], bar_size='15Min')
 plot_bars(df_15min)
 ```
-
-
 ![image info](misc/plot.png)
+
+Plot the assets under management of each agent
+
+```python
+import plotly.express as px
+import pandas as pd
+
+df_plot = pd.DataFrame()
+df_plot['Market Maker'] = mm_holdings['aum']
+df_plot['Market Taker'] = mt_holdings['aum']
+fig = px.line(df_plot,labels={'variable':'Agents','value':'Assets Under Management','dt':'Date'})
+fig.show()
+```
+![image info](misc/aum_plot.png)
+
+
+
 
 ## Project Documentation
 In order to further explore the project, take a look at our documentation:
