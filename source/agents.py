@@ -2,7 +2,7 @@ from .qmr_exchange import Agent
 import random
 
 class RandomMarketTaker(Agent):
-    def __init__(self,name,tickers, aum=10_000,prob_buy=.2,prob_sell=.2,qty_per_order=1):
+    def __init__(self,name,tickers, aum=10_000,prob_buy=.2,prob_sell=.2,qty_per_order=1,seed=None):
         Agent.__init__(self, name, tickers, aum)
         if  prob_buy + prob_sell> 1:
             raise ValueError("Sum of probabilities cannot be greater than 1.") 
@@ -11,6 +11,12 @@ class RandomMarketTaker(Agent):
         self.qty_per_order = qty_per_order
         self.tickers
         self.aum = aum
+
+        # Allows for setting a different independent seed to each instance
+        self.random = random
+        if seed is not None:
+            self.random.seed = seed
+
     
     def next(self):
         for ticker in self.tickers:
@@ -19,7 +25,6 @@ class RandomMarketTaker(Agent):
             if action == 'buy':
                 self.market_buy(ticker,self.qty_per_order)
             elif action == 'close':
-                print(self.get_position(ticker))
                 self.exchange.market_sell(ticker,self.get_position(ticker),self.name)
 
 
