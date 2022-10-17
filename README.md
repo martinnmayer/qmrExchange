@@ -100,8 +100,8 @@ from source.strategies import MovingAverageCrossover
 from source.agents import SmartMarketTaker
 
 strategy = MovingAverageCrossover(short_window=5, long_window=20)
-mt = SmartMarketTaker(name='smart_market_taker', tickers=tickers, aum=1_000, strategy=strategy, qty_per_order=1, seed=42)
-sim.add_agent(mt)
+smt = SmartMarketTaker(name='smart_market_taker', tickers=tickers, aum=1_000, strategy=strategy, qty_per_order=1, seed=42)
+sim.add_agent(smt)
 ```
 
 ### Run the simulation
