@@ -78,16 +78,30 @@ sim.exchange.create_asset(tickers[0])
 ```
 
 ### Add trading agents
-- We add a naive market maker that creates both buy and sell orders in each period. It quotes buy and sell prices based on the last traded price and the specified spread percentage.
-- We add a market taker that randomly buys and sells (based on the defined probabilities) on each period by means of market ordes (hence the word 'taker').
+We can add a naive market maker that creates both buy and sell orders in each period. It quotes buy and sell prices based on the last traded price and the specified spread percentage.
 
 
 ```python
 mm = NaiveMarketMaker(name='market_maker', tickers=tickers, aum=1_000, spread_pct=0.005, qty_per_order=4)
 sim.add_agent(mm)
+``` 
 
+As our market counter-parts, we can either use naive market taker that randomly buys and sells (based on the defined probabilities) on each period by means of market ordes (hence the word 'taker').
+
+```python
 mt = RandomMarketTaker(name='market_taker', tickers=tickers, aum=1_000, prob_buy=.2, prob_sell=.2, qty_per_order=1,seed=42)
 sim.add_agent(mt)
+```
+
+Or a 'smart' market taker, that uses a predefined trading strategy to buy and sell. In the present case, we use a simple moving average crossover strategy.
+
+```python
+from source.strategies import MovingAverageCrossover
+from source.agents import SmartMarketTaker
+
+strategy = MovingAverageCrossover(short_window=5, long_window=20)
+smt = SmartMarketTaker(name='smart_market_taker', tickers=tickers, aum=1_000, strategy=strategy, qty_per_order=1, seed=42)
+sim.add_agent(smt)
 ```
 
 ### Run the simulation
