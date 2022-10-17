@@ -99,7 +99,7 @@ Or a 'smart' market taker, that uses a predefined trading strategy to buy and se
 from source.strategies import MovingAverageCrossover
 from source.agents import SmartMarketTaker
 
-strategy = MovingAverageCrossover(tickers=tickers, short_window=5, long_window=20)
+strategy = MovingAverageCrossover(short_window=5, long_window=20)
 mt = SmartMarketTaker(name='smart_market_taker', tickers=tickers, aum=1_000, strategy=strategy, qty_per_order=1, seed=42)
 sim.add_agent(mt)
 ```
